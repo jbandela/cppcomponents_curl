@@ -1,4 +1,4 @@
-namespace cppcomponents_libcurl_libuv{
+namespace cppcomponents_curl{
 
 
 	// Options copied from curl.h and placed in namespace

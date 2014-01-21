@@ -15,15 +15,14 @@ namespace{
     MemLeakCheckInit mlcinit;
 }
 #endif
-#include <cppcomponents_libcurl_libuv/http_client.hpp>
+#include <cppcomponents_curl/http_client.hpp>
 #include <cppcomponents_async_coroutine_wrapper/cppcomponents_resumable_await.hpp>
-#include <cppcomponents_libuv/cppcomponents_libuv.hpp>
 #include <cppcomponents/loop_executor.hpp>
 
 #include <iostream>
 #include <assert.h>
 
-using namespace cppcomponents_libcurl_libuv;
+using namespace cppcomponents_curl;
 
 bool test_get(cppcomponents::awaiter await){
 
@@ -40,7 +39,7 @@ bool test_get(cppcomponents::awaiter await){
 
 int async_main(cppcomponents::awaiter await){
     await(cppcomponents::resumable(test_get)());
-    cppcomponents_libcurl_libuv::HttpClient client;
+    cppcomponents_curl::HttpClient client;
     auto response = await(client.Fetch("https://www.google.com/"));
     std::string str;
     if (response.ErrorCode() < 0){

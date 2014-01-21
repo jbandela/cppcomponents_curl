@@ -9,6 +9,12 @@
 
 #include <thread>
 
+#ifdef _WIN32
+#include <io.h>
+#else
+#include <unistd>
+#endif
+
 
 using namespace cppcomponents;
 using namespace cppcomponents::asio_runtime;
@@ -517,299 +523,281 @@ struct ImpResponse :implement_runtime_class<ImpResponse, Response_t>
 CPPCOMPONENTS_REGISTER(ImpResponse)
 
 
-//struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
-//{
-//	static const int pollid = 0;
-//	static const int callbackid = 0;
-//	static const int selfid = 0;
-//	bool own_executor_;
-//	use<uv::IUvExecutor> executor_;
-//	std::thread thread_;
-//
-//	CURLM* multi_;
-//
-//	use<uv::ITimer> timeout_;
-//
-//	static use<IEasy> ieasy_from_easy(CURL* easy){
-//		char* charpeasy = 0;
-//		curl_easy_getinfo(easy, CURLINFO_PRIVATE, &charpeasy);
-//		void* vpeasy = charpeasy;
-//		auto iunk = use<InterfaceUnknown>{reinterpret_portable_base<InterfaceUnknown>(static_cast<portable_base*>(vpeasy)), true};
-//		return iunk.QueryInterface<IEasy>();
-//	}
-//
-//	static void curl_perform(use<uv::IPoll>, int status, int events, curl_socket_t sockfd, ImpMulti* pthis)
-//	{
-//		int running_handles;
-//		int flags = 0;
-//		char *done_url;
-//		CURLMsg *message;
-//		int pending;
-//		pthis->timeout_.Stop();
-//
-//		if (events & uv::Constants::PollEvent::Readable)
-//			flags |= CURL_CSELECT_IN;
-//		if (events & uv::Constants::PollEvent::Writable)
-//			flags |= CURL_CSELECT_OUT;
-//
-//
-//
-//		curl_multi_socket_action(pthis->multi_, sockfd, flags,
-//			&running_handles);
-//
-//		while ((message = curl_multi_info_read(pthis->multi_, &pending))) {
-//
-//
-//			switch (message->msg) {
-//			case CURLMSG_DONE:
-//			{
-//								 curl_easy_getinfo(message->easy_handle, CURLINFO_EFFECTIVE_URL,
-//									 &done_url);
-//								 auto easy = message->easy_handle;
-//								 auto ieasy = ieasy_from_easy(easy);
-//
-//								 pthis->RemoveAndCallCallback(ieasy, message->data.result);
-//
-//			}
-//
-//				break;
-//			default:
-//				fprintf(stderr, "CURLMSG default\n");
-//				abort();
-//			}
-//		}
-//	}
-//
-//
-//
-//	static void start_timeout(CURLM *multi, long timeout_ms, void *userp)
-//	{
-//		try{
-//
-//			auto pthis = static_cast<ImpMulti*>(userp);
-//			auto& timeout = pthis->timeout_;
-//            if (timeout_ms <= 0){
-//                int running_handles;
-//                curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, 0,
-//                    &running_handles);
-//                int pending = 0;
-//                CURLMsg * message = nullptr;
-//                while ((message = curl_multi_info_read(pthis->multi_, &pending))) {
-//
-//
-//                    switch (message->msg) {
-//                    case CURLMSG_DONE:
-//                    {
-//
-//                                         auto easy = message->easy_handle;
-//                                         auto ieasy = ieasy_from_easy(easy);
-//
-//                                         pthis->RemoveAndCallCallback(ieasy, message->data.result);
-//
-//                    }
-//
-//                        break;
-//                    default:
-//                        fprintf(stderr, "CURLMSG default\n");
-//                        abort();
-//                    }
-//                }
-//                return;
-//            }
-//
-//			timeout.Start([multi](use<uv::ITimer>, int status){
-//				int running_handles;
-//				curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, 0,
-//					&running_handles);
-//			}, std::chrono::milliseconds{ timeout_ms });
-//		}
-//		catch (...){
-//			// swallow exceptions
-//			int running_handles;
-//			curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, CURL_CSELECT_ERR,
-//				&running_handles);
-//		}
-//	}
-//
-//	static int handle_socket(CURL *easy, curl_socket_t s, int action, void *userp,
-//		void *)
-//	{
-//		try{
-//
-//
-//			auto pthis = static_cast<ImpMulti*>(userp);
-//			auto ieasy = ieasy_from_easy(easy);
-//			auto iunkpoll = ieasy.GetPrivate(&pollid);
-//			use<uv::IPoll> poll;
-//		
-//			if (action == CURL_POLL_IN || action == CURL_POLL_OUT) {
-//				if (!iunkpoll) {
-//					poll = uv::Poll{ pthis->executor_.GetLoop(), s, false };
-//					ieasy.StorePrivate(&pollid, poll);
-//				}
-//				else{
-//					poll = iunkpoll.QueryInterface<uv::IPoll>();
-//
-//				}
-//			}
-//
-//			switch (action) {
-//			case CURL_POLL_IN:
-//				using namespace std::placeholders;
-//				poll.Start(uv::Constants::PollEvent::Readable, std::bind(curl_perform, _1, _2, _3, s,pthis));
-//				break;
-//			case CURL_POLL_OUT:
-//				poll.Start(uv::Constants::PollEvent::Writable, std::bind(curl_perform, _1, _2, _3, s,pthis));
-//
-//
-//				break;
-//			case CURL_POLL_REMOVE:
-//				if (poll) {
-//					poll.Stop();
-//					ieasy.RemovePrivate(&pollid);
-//				}
-//				break;
-//			default:
-//				return -1;
-//			}
-//
-//			return 0;
-//
-//		}
-//		catch (...){
-//			return -1;
-//			// swallow exceptions
-//		}
-//	}
-//
-//	void Setup(){
-//		multi_ = curl_multi_init();
-//		if (!multi_){
-//			throw error_fail();
-//		}
-//		curl_multi_setopt(multi_, CURLMOPT_SOCKETFUNCTION, handle_socket);
-//		curl_multi_setopt(multi_, CURLMOPT_SOCKETDATA, static_cast<void*>(this));
-//		curl_multi_setopt(multi_, CURLMOPT_TIMERFUNCTION, start_timeout);
-//		curl_multi_setopt(multi_, CURLMOPT_TIMERDATA, static_cast<void*>(this));
-//		timeout_ = uv::Timer{ executor_.GetLoop() };
-//	}
-//
-//	ImpMulti(use<InterfaceUnknown> executor = nullptr) 
-//		:own_executor_{!executor},
-//		executor_{ own_executor_ ? uv::Executor{} : executor.QueryInterface<uv::IUvExecutor>() }
-//	{
-//		use<IMulti> self = QueryInterface<IMulti>();
-//		executor_.Add([this,self]()mutable{
-//			Setup();
-//		});
-//		if (own_executor_){
-//			auto exec = executor_;
-//			auto threadfunc = [this,exec]()mutable{
-//				exec.Loop();
-//				exec = nullptr;
-//			};
-//			thread_ = std::thread{ threadfunc };
-//		}
-//
-//
-//		return;
-//
-//	}
-//	void ReleaseImplementationDestroy(){
-//		auto multi = multi_;
-//		timeout_ = nullptr;
-//		auto exec = executor_;
-//		executor_ = nullptr;
-//		exec.Add([multi,exec]()mutable{
-//			curl_multi_cleanup(multi);
-//			multi = nullptr;
-//			exec.MakeLoopExit();
-//			exec = nullptr;
-//		});
-//		if (own_executor_){
-//			thread_.join();
-//		}
-//		auto i = exec.NumPendingClosures();
-//		for (; i > 0; i = exec.NumPendingClosures()){
-//			exec.RunQueuedClosures();
-//		}
-//		exec = nullptr;
-//		delete this;
-//	}
-//	~ImpMulti(){
-//	}
-//
-//	void RemovePrivate(cppcomponents::use<IEasy>& easy){
-//			easy.RemovePrivate(&callbackid);
-//			easy.RemovePrivate(&pollid);
-//			easy.RemovePrivate(&selfid);
-//	}
-//
-//	Future<void> Add(cppcomponents::use<IEasy> easy, cppcomponents::use<Callbacks::CompletedFunction> func){
-//		auto promise = make_promise<void>();
-//		use<IMulti> self = QueryInterface<IMulti>();
-//		auto closure = [self,promise,this, easy, func]()mutable{
-//			// Store the promise
-//			try{
-//
-//				easy.StorePrivate(&callbackid, func);
-//				easy.StorePrivate(&selfid, self);
-//				auto res = curl_multi_add_handle(multi_, static_cast<CURL*>(easy.GetNative()));
-//				curl_throw_if_error(res);
-//				promise.Set();
-//			}
-//			catch (...){
-//				RemovePrivate(easy);
-//
-//				promise.SetError(error_fail::ec);
-//			}
-//		};
-//
-//		executor_.Add(closure);
-//
-//		return promise.QueryInterface<IFuture<void>>();
-//
-//	}
-//	template<class I>
-//	use<I> GetPrivateSafe(use<IEasy>& easy, const void* key){
-//		auto iunk = easy.GetPrivate(key);
-//		if (!iunk){
-//			throw error_fail();
-//		}
-//		return iunk.QueryInterface<I>();
-//	}
-//	void RemoveAndCallCallback(use<IEasy> easy, CURLcode code){
-//		auto res = curl_multi_remove_handle(multi_, static_cast<CURL*>(easy.GetNative()));
-//		curl_throw_if_error(res);
-//		auto func = GetPrivateSafe<Callbacks::CompletedFunction>(easy, &callbackid);
-//		RemovePrivate(easy);
-//		func(easy, code);
-//
-//	}
-//	Future<void> Remove(cppcomponents::use<IEasy> easy){
-//		auto promise = make_promise<void>();
-//		auto closure = [promise, this, easy]()mutable{
-//
-//			RemoveAndCallCallback(easy, CURLE_OK);
-//		};
-//		executor_.Add(closure);
-//
-//		return promise.QueryInterface<IFuture<void>>();
-//	}
-//	void* GetNative(){
-//		return multi_;
-//	}
-//
-//
-//
-//
-//	void* IImp_GetImp(){
-//		return this;
-//
-//	}
-//};
-//
-//CPPCOMPONENTS_REGISTER(ImpMulti)
+struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
+{
+	static const int pollid = 0;
+	static const int callbackid = 0;
+	static const int selfid = 0;
+	
+
+	CURLM* multi_;
+
+	asio_runtime::Timer timer_;
+
+	cppcomponents::rw_lock lock_;
+	std::map<curl_socket_t, use<asio_runtime::ISocket>> socket_map_;
+
+	static use<IEasy> ieasy_from_easy(CURL* easy){
+		char* charpeasy = 0;
+		curl_easy_getinfo(easy, CURLINFO_PRIVATE, &charpeasy);
+		void* vpeasy = charpeasy;
+		auto iunk = use<InterfaceUnknown>{reinterpret_portable_base<InterfaceUnknown>(static_cast<portable_base*>(vpeasy)), true};
+		return iunk.QueryInterface<IEasy>();
+	}
+
+	static void curl_perform(int events, curl_socket_t sockfd, ImpMulti* pthis)
+	{
+		int running_handles;
+		int flags = 0;
+		char *done_url;
+		CURLMsg *message;
+		int pending;
+
+		if (events & 1)
+			flags |= CURL_CSELECT_IN;
+		if (events & 2)
+			flags |= CURL_CSELECT_OUT;
+
+
+
+		curl_multi_socket_action(pthis->multi_, sockfd, flags,
+			&running_handles);
+
+		while ((message = curl_multi_info_read(pthis->multi_, &pending))) {
+
+
+			switch (message->msg) {
+			case CURLMSG_DONE:
+			{
+								 curl_easy_getinfo(message->easy_handle, CURLINFO_EFFECTIVE_URL,
+									 &done_url);
+								 auto easy = message->easy_handle;
+								 auto ieasy = ieasy_from_easy(easy);
+
+								 pthis->RemoveAndCallCallback(ieasy, message->data.result);
+
+			}
+
+				break;
+			default:
+				abort();
+			}
+		}
+	}
+
+
+
+	static void start_timeout(CURLM *multi, long timeout_ms, void *userp)
+	{
+		try{
+
+			auto pthis = static_cast<ImpMulti*>(userp);
+			auto& timeout = pthis->timer_;
+            if (timeout_ms <= 0){
+                int running_handles;
+                curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, 0,
+                    &running_handles);
+                int pending = 0;
+                CURLMsg * message = nullptr;
+                while ((message = curl_multi_info_read(pthis->multi_, &pending))) {
+
+
+                    switch (message->msg) {
+                    case CURLMSG_DONE:
+                    {
+
+                                         auto easy = message->easy_handle;
+                                         auto ieasy = ieasy_from_easy(easy);
+
+                                         pthis->RemoveAndCallCallback(ieasy, message->data.result);
+
+                    }
+
+                        break;
+                    default:
+                        fprintf(stderr, "CURLMSG default\n");
+                        abort();
+                    }
+                }
+                return;
+			}
+			timeout.WaitFor(std::chrono::milliseconds{ timeout_ms })
+				.Then([multi](Future<void> f){
+				int running_handles;
+				curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, 0,
+					&running_handles);
+			});
+
+		}
+		catch (...){
+			// swallow exceptions
+			int running_handles;
+			curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, CURL_CSELECT_ERR,
+				&running_handles);
+		}
+	}
+
+	use<IAsyncStream> GetStreamFromSocket(curl_socket_t s){
+		sockaddr addr;
+		int sz = sizeof(addr);
+		getsockname(s, &addr, &sz);
+		asio_runtime::Tcp t;
+		int iptype = 4;
+		if (addr.sa_family == AF_INET6){
+			iptype = 6;
+		}
+		// Duplicate socket from https://svn.boost.org/trac/boost/ticket/5157
+#ifdef _WIN32
+		WSAPROTOCOL_INFO pi;
+		auto res = WSADuplicateSocket(s, GetCurrentProcessId(), &pi);
+		auto s2 = WSASocket(pi.iAddressFamily/*AF_INET*/, pi.iSocketType/*SOCK_STREAM*/,
+			pi.iProtocol/*IPPROTO_TCP*/, &pi, 0, 0);
+
+#else
+		//linux
+		auto s2 = dup(s); 
+#endif
+		t.AssignRaw(iptype, s2);
+		return t;
+
+		
+	}
+	static int handle_socket(CURL *easy, curl_socket_t s, int action, void *userp,
+		void *)
+	{
+		try{
+
+
+			auto pthis = static_cast<ImpMulti*>(userp);
+			auto ieasy = ieasy_from_easy(easy);
+			auto is = pthis->GetStreamFromSocket(s);
+
+		
+
+
+			switch (action) {
+			case CURL_POLL_IN:
+				is.ReadPoll().Then([pthis, s](Future<void> f){
+					curl_perform(1, s, pthis);
+				});
+				break;
+			case CURL_POLL_OUT:
+				is.WritePoll().Then([pthis, s](Future<void> f){
+					curl_perform(2, s, pthis);
+				});
+
+				break;
+			case CURL_POLL_REMOVE:
+
+				break;
+			default:
+				return -1;
+			}
+
+			return 0;
+
+		}
+		catch (...){
+			return -1;
+			// swallow exceptions
+		}
+	}
+
+	void Setup(){
+		multi_ = curl_multi_init();
+		if (!multi_){
+			throw error_fail();
+		}
+		curl_multi_setopt(multi_, CURLMOPT_SOCKETFUNCTION, handle_socket);
+		curl_multi_setopt(multi_, CURLMOPT_SOCKETDATA, static_cast<void*>(this));
+		curl_multi_setopt(multi_, CURLMOPT_TIMERFUNCTION, start_timeout);
+		curl_multi_setopt(multi_, CURLMOPT_TIMERDATA, static_cast<void*>(this));
+	}
+
+	ImpMulti() 
+	{
+		Setup();
+		
+
+
+	}
+
+	~ImpMulti(){
+		curl_multi_cleanup(multi_);
+		multi_ = 0;
+	}
+
+	void RemovePrivate(cppcomponents::use<IEasy>& easy){
+			easy.RemovePrivate(&callbackid);
+			easy.RemovePrivate(&pollid);
+			easy.RemovePrivate(&selfid);
+	}
+
+	Future<void> Add(cppcomponents::use<IEasy> easy, cppcomponents::use<Callbacks::CompletedFunction> func){
+		auto promise = make_promise<void>();
+		use<IMulti> self = QueryInterface<IMulti>();
+		auto closure = [self,promise,this, easy, func]()mutable{
+			// Store the promise
+			try{
+
+				easy.StorePrivate(&callbackid, func);
+				easy.StorePrivate(&selfid, self);
+				auto res = curl_multi_add_handle(multi_, static_cast<CURL*>(easy.GetNative()));
+				curl_throw_if_error(res);
+				promise.Set();
+			}
+			catch (...){
+				RemovePrivate(easy);
+
+				promise.SetError(error_fail::ec);
+			}
+		};
+
+		Runtime::GetThreadPool().Add(closure);
+
+		return promise.QueryInterface<IFuture<void>>();
+
+	}
+	template<class I>
+	use<I> GetPrivateSafe(use<IEasy>& easy, const void* key){
+		auto iunk = easy.GetPrivate(key);
+		if (!iunk){
+			throw error_fail();
+		}
+		return iunk.QueryInterface<I>();
+	}
+	void RemoveAndCallCallback(use<IEasy> easy, CURLcode code){
+		auto res = curl_multi_remove_handle(multi_, static_cast<CURL*>(easy.GetNative()));
+		curl_throw_if_error(res);
+		auto func = GetPrivateSafe<Callbacks::CompletedFunction>(easy, &callbackid);
+		RemovePrivate(easy);
+		func(easy, code);
+
+	}
+	Future<void> Remove(cppcomponents::use<IEasy> easy){
+		auto promise = make_promise<void>();
+		auto closure = [promise, this, easy]()mutable{
+
+			RemoveAndCallCallback(easy, CURLE_OK);
+		};
+		Runtime::GetThreadPool().Add(closure);
+
+		return promise.QueryInterface<IFuture<void>>();
+	}
+	void* GetNative(){
+		return multi_;
+	}
+
+
+
+
+	void* IImp_GetImp(){
+		return this;
+
+	}
+};
+
+CPPCOMPONENTS_REGISTER(ImpMulti)
 
 struct curl_freer{
 	void* p_;
