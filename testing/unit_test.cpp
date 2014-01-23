@@ -39,9 +39,9 @@ bool test_get(cppcomponents::awaiter await){
 }
 
 int async_main(cppcomponents::awaiter await){
-   // await(cppcomponents::resumable(test_get)());
+    await(cppcomponents::resumable(test_get)());
     cppcomponents_curl::HttpClient client;
-	auto response = await(client.Fetch("http://www.boost.org/LICENSE_1_0.txt"));
+	auto response = await(client.Fetch("https://www.google.com"));
     std::string str;
     if (response.ErrorCode() < 0){
         str = "Error: " + response.ErrorMessage().to_string();
