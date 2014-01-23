@@ -698,12 +698,12 @@ struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
 		return 0;
 	}
 
-	static void read_poll(use<IAsyncStream> is, curl_socket_t s,ImpMulti* pthis){
+	static void read_poll(use<IAsyncStream> is, curl_socket_t s, ImpMulti* pthis, bool add_polling = false){
 		is.ReadPoll().Then(pthis->strand_,[=](Future<void> f){
-			if (f.ErrorCode() < 0){
-
+			if (add_polling){
+				pthis->polling_.insert(s);
 			}
-			else{
+			if (f.ErrorCode() == 0){
 				curl_perform(1, s, pthis);
 			}
 			if (pthis->polling_.find(s) != pthis->polling_.end()){
@@ -711,12 +711,12 @@ struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
 			}
 		});
 	}
-	static void write_poll(use<IAsyncStream> is, curl_socket_t s,ImpMulti* pthis){
+	static void write_poll(use<IAsyncStream> is, curl_socket_t s,ImpMulti* pthis,bool add_polling = false){
 		is.WritePoll().Then(pthis->strand_,[=](Future<void> f){
-			if (f.ErrorCode() < 0){
-
+			if (add_polling){
+				pthis->polling_.insert(s);
 			}
-			else{
+			if (f.ErrorCode() == 0){
 				curl_perform(2, s, pthis);
 			}
 			if (pthis->polling_.find(s) != pthis->polling_.end()){
@@ -742,14 +742,17 @@ struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
 
 			switch (action) {
 			case CURL_POLL_IN:
-				pthis->polling_.insert(s);
-				read_poll(is, s, pthis);
+				read_poll(is, s, pthis,true);
 
 				break;
 			case CURL_POLL_OUT:
-				pthis->polling_.insert(s);
-				write_poll(is, s, pthis);
+				write_poll(is, s, pthis,true);
 
+				break;
+
+			case CURL_POLL_INOUT:
+				read_poll(is, s, pthis, true);
+				write_poll(is, s, pthis, true);
 				break;
 				
 			case CURL_POLL_REMOVE:
