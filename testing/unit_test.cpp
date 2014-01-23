@@ -41,7 +41,7 @@ bool test_get(cppcomponents::awaiter await){
 int async_main(cppcomponents::awaiter await){
    // await(cppcomponents::resumable(test_get)());
     cppcomponents_curl::HttpClient client;
-	auto response = await(client.Fetch("http://www.cnn.com/"));
+	auto response = await(client.Fetch("http://www.boost.org/LICENSE_1_0.txt"));
     std::string str;
     if (response.ErrorCode() < 0){
         str = "Error: " + response.ErrorMessage().to_string();

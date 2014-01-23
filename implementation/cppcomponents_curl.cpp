@@ -536,6 +536,7 @@ struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
 
 	cppcomponents::rw_lock lock_;
 	std::map<curl_socket_t, std::pair<use<InterfaceUnknown>,use<asio_runtime::ISocket>>> socket_map_;
+	Strand strand_;
 
 	static use<IEasy> ieasy_from_easy(CURL* easy){
 		char* charpeasy = 0;
@@ -547,11 +548,8 @@ struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
 
 	static void curl_perform(int events, curl_socket_t sockfd, ImpMulti* pthis)
 	{
-		int running_handles;
 		int flags = 0;
-		char *done_url;
-		CURLMsg *message;
-		int pending;
+
 
 		if (events & 1)
 			flags |= CURL_CSELECT_IN;
@@ -560,68 +558,54 @@ struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
 
 
 
-		auto mcode = curl_multi_socket_action(pthis->multi_, sockfd, flags,
-			&running_handles);
-		if (running_handles == 0){
-			pthis->timer_.Cancel();
-		}
-		while ((message = curl_multi_info_read(pthis->multi_, &pending))) {
+		pthis->action_and_check(sockfd,flags);
 
-
-			switch (message->msg) {
-			case CURLMSG_DONE:
-			{
-								 curl_easy_getinfo(message->easy_handle, CURLINFO_EFFECTIVE_URL,
-									 &done_url);
-								 auto easy = message->easy_handle;
-								 auto ieasy = ieasy_from_easy(easy);
-
-								 pthis->RemoveAndCallCallback(ieasy, message->data.result);
-
-			}
-
-				break;
-			default:
-				abort();
-			}
-		}
 	}
 
+	
+	void action_and_check(curl_socket_t sockfd, int flags){
+		auto closure = [sockfd, flags,this](){
+			int running_handles = 0;
+			auto mcode = curl_multi_socket_action(multi_, sockfd, flags,
+				&running_handles);
+			int pending = 0;
+			CURLMsg * message = nullptr;
+			while ((message = curl_multi_info_read(multi_, &pending))) {
 
+
+				switch (message->msg) {
+				case CURLMSG_DONE:
+				{
+
+									 auto easy = message->easy_handle;
+									 auto ieasy = ieasy_from_easy(easy);
+
+									 RemoveAndCallCallback(ieasy, message->data.result);
+
+				}
+
+					break;
+				default:
+					fprintf(stderr, "CURLMSG default\n");
+					abort();
+				}
+			}
+		};
+
+		strand_.Add(closure);
+
+	}
 
 	static void start_timeout(CURLM *multi, long timeout_ms, void *userp)
 	{
+			auto pthis = static_cast<ImpMulti*>(userp);
 		try{
 
-			auto pthis = static_cast<ImpMulti*>(userp);
 			auto& timeout = pthis->timer_;
 			timeout.Cancel();
             if (timeout_ms <= 0){
-                int running_handles;
-                curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, 0,
-                    &running_handles);
-                int pending = 0;
-                CURLMsg * message = nullptr;
-                while ((message = curl_multi_info_read(pthis->multi_, &pending))) {
+				pthis->action_and_check(CURL_SOCKET_TIMEOUT, 0);
 
-
-                    switch (message->msg) {
-                    case CURLMSG_DONE:
-                    {
-
-                                         auto easy = message->easy_handle;
-                                         auto ieasy = ieasy_from_easy(easy);
-
-                                         pthis->RemoveAndCallCallback(ieasy, message->data.result);
-
-                    }
-
-                        break;
-                    default:
-                        fprintf(stderr, "CURLMSG default\n");
-                        abort();
-                    }
-                }
                 return;
 			}
 			timeout.ExpiresFromNow(std::chrono::milliseconds{ timeout_ms });
@@ -631,39 +615,15 @@ struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
 				if (ec < 0){
 					return;
 				}
-				int running_handles;
-				curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, 0,
-					&running_handles);
-				int pending = 0;
-				CURLMsg * message = nullptr;
-				while ((message = curl_multi_info_read(pthis->multi_, &pending))) {
+				pthis->action_and_check(CURL_SOCKET_TIMEOUT, 0);
 
-
-					switch (message->msg) {
-					case CURLMSG_DONE:
-					{
-
-										 auto easy = message->easy_handle;
-										 auto ieasy = ieasy_from_easy(easy);
-
-										 pthis->RemoveAndCallCallback(ieasy, message->data.result);
-
-					}
-
-						break;
-					default:
-						fprintf(stderr, "CURLMSG default\n");
-						abort();
-					}
-				}
 			});
 
 		}
 		catch (...){
 			// swallow exceptions
-			int running_handles;
-			curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, CURL_CSELECT_ERR,
-				&running_handles);
+			pthis->action_and_check(CURL_SOCKET_TIMEOUT, CURL_CSELECT_ERR);
+
 		}
 	}
 
@@ -826,6 +786,8 @@ struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
 				easy.StorePrivate(&callbackid, func);
 				easy.StorePrivate(&selfid, self);
 				auto res = curl_multi_add_handle(multi_, static_cast<CURL*>(easy.GetNative()));
+				int runninghandles = 0;
+				curl_multi_socket_action(multi_, CURL_SOCKET_TIMEOUT, 0, &runninghandles);
 				curl_throw_if_error(res);
 				promise.Set();
 			}
@@ -836,7 +798,7 @@ struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
 			}
 		};
 
-		Runtime::GetThreadPool().Add(closure);
+		strand_.Add(closure);
 		return promise.QueryInterface<IFuture<void>>();
 
 	}
