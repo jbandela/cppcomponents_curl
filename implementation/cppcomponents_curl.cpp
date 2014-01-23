@@ -707,7 +707,7 @@ struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
 				curl_perform(1, s, pthis);
 			}
 			if (pthis->polling_.find(s) != pthis->polling_.end()){
-				pthis->strand_.Add(std::bind(read_poll, is, s, pthis));
+				read_poll(is, s, pthis);
 			}
 		});
 	}
@@ -720,7 +720,7 @@ struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
 				curl_perform(2, s, pthis);
 			}
 			if (pthis->polling_.find(s) != pthis->polling_.end()){
-				pthis->strand_.Add(std::bind(write_poll, is, s, pthis));
+				write_poll(is, s, pthis);
 			}
 		});
 	}
