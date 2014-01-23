@@ -535,7 +535,7 @@ struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
 	asio_runtime::Timer timer_;
 
 	cppcomponents::rw_lock lock_;
-	std::map<curl_socket_t, use<asio_runtime::ISocket>> socket_map_;
+	std::map<curl_socket_t, std::pair<use<InterfaceUnknown>,use<asio_runtime::ISocket>>> socket_map_;
 
 	static use<IEasy> ieasy_from_easy(CURL* easy){
 		char* charpeasy = 0;
@@ -560,9 +560,11 @@ struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
 
 
 
-		curl_multi_socket_action(pthis->multi_, sockfd, flags,
+		auto mcode = curl_multi_socket_action(pthis->multi_, sockfd, flags,
 			&running_handles);
-
+		if (running_handles == 0){
+			pthis->timer_.Cancel();
+		}
 		while ((message = curl_multi_info_read(pthis->multi_, &pending))) {
 
 
@@ -593,6 +595,7 @@ struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
 
 			auto pthis = static_cast<ImpMulti*>(userp);
 			auto& timeout = pthis->timer_;
+			timeout.Cancel();
             if (timeout_ms <= 0){
                 int running_handles;
                 curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, 0,
@@ -621,11 +624,38 @@ struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
                 }
                 return;
 			}
-			timeout.WaitFor(std::chrono::milliseconds{ timeout_ms })
-				.Then([multi](Future<void> f){
+			timeout.ExpiresFromNow(std::chrono::milliseconds{ timeout_ms });
+			timeout.Wait()
+				.Then([multi,pthis](Future<void> f){
+				auto ec = f.ErrorCode();
+				if (ec < 0){
+					return;
+				}
 				int running_handles;
 				curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, 0,
 					&running_handles);
+				int pending = 0;
+				CURLMsg * message = nullptr;
+				while ((message = curl_multi_info_read(pthis->multi_, &pending))) {
+
+
+					switch (message->msg) {
+					case CURLMSG_DONE:
+					{
+
+										 auto easy = message->easy_handle;
+										 auto ieasy = ieasy_from_easy(easy);
+
+										 pthis->RemoveAndCallCallback(ieasy, message->data.result);
+
+					}
+
+						break;
+					default:
+						fprintf(stderr, "CURLMSG default\n");
+						abort();
+					}
+				}
 			});
 
 		}
@@ -644,7 +674,7 @@ struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
 			return nullptr;
 		}
 		else{
-			return iter->second.QueryInterface<IAsyncStream>();
+			return iter->second.second.QueryInterface<IAsyncStream>();
 		}
 
 		
@@ -672,8 +702,8 @@ struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
 				}
 				Tcp t;
 				t.OpenRaw(iptype);
-				rw_locker(pthis->lock_);
-				pthis->socket_map_[t.NativeHandle()] = t;
+				rw_locker(pthis->lock_,true);
+				pthis->socket_map_[t.NativeHandle()] = std::make_pair(pthis->QueryInterface<InterfaceUnknown>(),t);
 				sockfd = t.NativeHandle();
 			}
 
@@ -687,12 +717,13 @@ struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
 	static int closesocket(void *clientp, curl_socket_t item)
 	{
 		auto pthis = static_cast<ImpMulti*>(clientp);
+		rw_locker lock(pthis->lock_, true);
 
 		auto it = pthis->socket_map_.find(item);
 
 		if (it != pthis->socket_map_.end())
 		{
-			it->second.Close();
+			it->second.second.Close();
 			pthis->socket_map_.erase(it);
 		}
 
@@ -711,7 +742,10 @@ struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
 			auto is = pthis->GetStreamFromSocket(s);
 
 		
-
+			if (!is){
+				return 0;
+			}
+			assert(is.QueryInterface<ISocket>().NativeHandle() == s);
 
 			switch (action) {
 			case CURL_POLL_IN:
@@ -725,18 +759,19 @@ struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
 				});
 
 				break;
+				
 			case CURL_POLL_REMOVE:
 
 				break;
 			default:
-				return -1;
+				return 0;
 			}
 
 			return 0;
 
 		}
 		catch (...){
-			return -1;
+			return 0;
 			// swallow exceptions
 		}
 	}
