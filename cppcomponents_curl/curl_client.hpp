@@ -56,7 +56,7 @@ namespace cppcomponents_curl{
 			CACerts = "cacert.pem";
 		}
 	};
-	struct HttpClient{
+	struct CurlClient{
 	private:
 
 		cppcomponents::use<IMulti> multi_;
@@ -325,9 +325,9 @@ namespace cppcomponents_curl{
 
 		}
 	public:
-		HttpClient(cppcomponents::use<IMulti> m) :multi_{ m }, easy_{}, response_{ easy_ }
+		CurlClient(cppcomponents::use<IMulti> m) :multi_{ m }, easy_{}, response_{ easy_ }
 		{}
-		HttpClient() :HttpClient{ Curl::DefaultMulti() }
+		CurlClient() :CurlClient{ Curl::DefaultMulti() }
 		{}
 
 

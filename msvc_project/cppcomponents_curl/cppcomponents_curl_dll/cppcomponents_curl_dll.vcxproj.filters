@@ -23,7 +23,7 @@
     <ClInclude Include="..\..\..\cppcomponents_curl\cppcomponents_curl.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\cppcomponents_curl\http_client.hpp">
+    <ClInclude Include="..\..\..\cppcomponents_curl\curl_client.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

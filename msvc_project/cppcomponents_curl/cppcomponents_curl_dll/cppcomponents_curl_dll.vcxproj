@@ -86,7 +86,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\cppcomponents_curl\cppcomponents_curl.hpp" />
-    <ClInclude Include="..\..\..\cppcomponents_curl\http_client.hpp" />
+    <ClInclude Include="..\..\..\cppcomponents_curl\curl_client.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
