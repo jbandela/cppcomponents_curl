@@ -58,7 +58,6 @@ int async_main(cppcomponents::awaiter await){
 
 int main(){
     cppcomponents::LoopExecutor exec;
-    new char[50];
     auto am = cppcomponents::resumable(async_main);
     am().Then([&exec](cppcomponents::Future<int> f){
         exec.MakeLoopExit();
