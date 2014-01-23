@@ -27,7 +27,7 @@ using namespace cppcomponents_curl;
 bool test_get(cppcomponents::awaiter await){
 
     CurlClient client;
-    Request req("http://httpbin.org/get");
+    Request req("https://www.google.com");
     //req.ConnectTimeout = 5;
     //req.RequestTimeout = 10;
     auto response = await(client.Fetch(req));
@@ -41,7 +41,7 @@ bool test_get(cppcomponents::awaiter await){
 int async_main(cppcomponents::awaiter await){
     await(cppcomponents::resumable(test_get)());
     cppcomponents_curl::CurlClient client;
-	auto response = await(client.Fetch("https://www.google.com"));
+	auto response = await(client.Fetch("ftp://sailor.gutenberg.lib.md.us/gutenberg/8/81/81-h/81-h.htm"));
     std::string str;
     if (response.ErrorCode() < 0){
         str = "Error: " + response.ErrorMessage().to_string();
