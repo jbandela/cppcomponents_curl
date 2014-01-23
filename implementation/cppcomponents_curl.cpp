@@ -638,30 +638,68 @@ struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
 	}
 
 	use<IAsyncStream> GetStreamFromSocket(curl_socket_t s){
-		sockaddr addr;
-		int sz = sizeof(addr);
-		getsockname(s, &addr, &sz);
-		asio_runtime::Tcp t;
-		int iptype = 4;
-		if (addr.sa_family == AF_INET6){
-			iptype = 6;
+		rw_locker lock(lock_);
+		auto iter = socket_map_.find(s);
+		if (iter == socket_map_.end()){
+			return nullptr;
 		}
-		// Duplicate socket from https://svn.boost.org/trac/boost/ticket/5157
-#ifdef _WIN32
-		WSAPROTOCOL_INFO pi;
-		auto res = WSADuplicateSocket(s, GetCurrentProcessId(), &pi);
-		auto s2 = WSASocket(pi.iAddressFamily/*AF_INET*/, pi.iSocketType/*SOCK_STREAM*/,
-			pi.iProtocol/*IPPROTO_TCP*/, &pi, 0, 0);
-
-#else
-		//linux
-		auto s2 = dup(s); 
-#endif
-		t.AssignRaw(iptype, s2);
-		return t;
+		else{
+			return iter->second.QueryInterface<IAsyncStream>();
+		}
 
 		
 	}
+
+	/* CURLOPT_OPENSOCKETFUNCTION */
+	static curl_socket_t opensocket(void *clientp,
+		curlsocktype purpose,
+	struct curl_sockaddr *address)
+	{
+		auto pthis = static_cast<ImpMulti*>(clientp);
+
+		
+
+		curl_socket_t sockfd = CURL_SOCKET_BAD;
+
+		try{
+
+			/* restrict to ipv4 or ipv6*/
+			if (purpose == CURLSOCKTYPE_IPCXN && (address->family == AF_INET || address->family == AF_INET6))
+			{
+				int iptype = 4;
+				if (address->family == AF_INET6){
+					iptype = 6;
+				}
+				Tcp t;
+				t.OpenRaw(iptype);
+				rw_locker(pthis->lock_);
+				pthis->socket_map_[t.NativeHandle()] = t;
+				sockfd = t.NativeHandle();
+			}
+
+		}
+		catch (std::exception&){}
+
+		return sockfd;
+	}
+
+	/* CURLOPT_CLOSESOCKETFUNCTION */
+	static int closesocket(void *clientp, curl_socket_t item)
+	{
+		auto pthis = static_cast<ImpMulti*>(clientp);
+
+		auto it = pthis->socket_map_.find(item);
+
+		if (it != pthis->socket_map_.end())
+		{
+			it->second.Close();
+			pthis->socket_map_.erase(it);
+		}
+
+		return 0;
+	}
+
+
 	static int handle_socket(CURL *easy, curl_socket_t s, int action, void *userp,
 		void *)
 	{
@@ -736,9 +774,19 @@ struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
 	Future<void> Add(cppcomponents::use<IEasy> easy, cppcomponents::use<Callbacks::CompletedFunction> func){
 		auto promise = make_promise<void>();
 		use<IMulti> self = QueryInterface<IMulti>();
+		
+
 		auto closure = [self,promise,this, easy, func]()mutable{
 			// Store the promise
 			try{
+				auto ceasy = static_cast<CURL*>(easy.GetNative());
+				/* call this function to get a socket */
+				curl_easy_setopt(ceasy, CURLOPT_OPENSOCKETFUNCTION, opensocket);
+				curl_easy_setopt(ceasy, CURLOPT_OPENSOCKETDATA, static_cast<void*>(this));
+
+				/* call this function to close a socket */
+				curl_easy_setopt(ceasy, CURLOPT_CLOSESOCKETFUNCTION, closesocket);
+				curl_easy_setopt(ceasy, CURLOPT_CLOSESOCKETDATA, static_cast<void*>(this));
 
 				easy.StorePrivate(&callbackid, func);
 				easy.StorePrivate(&selfid, self);
@@ -754,7 +802,6 @@ struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
 		};
 
 		Runtime::GetThreadPool().Add(closure);
-
 		return promise.QueryInterface<IFuture<void>>();
 
 	}
