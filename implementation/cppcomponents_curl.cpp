@@ -541,6 +541,7 @@ struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
 	std::set<curl_socket_t> polling_;
 	
 	Strand strand_;
+	use<IThreadPool> tp_;
 
 	static use<IEasy> ieasy_from_easy(CURL* easy){
 		char* charpeasy = 0;
@@ -788,7 +789,7 @@ struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
 	ImpMulti() 
 	{
 		Setup();
-		
+		tp_ = Runtime::GetThreadPool();
 
 
 	}
