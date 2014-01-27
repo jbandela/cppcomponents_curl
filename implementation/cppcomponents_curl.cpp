@@ -857,11 +857,11 @@ struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
 		func(easy, code);
 
 	}
-	Future<void> Remove(cppcomponents::use<IEasy> easy){
+	Future<void> Remove(cppcomponents::use<IEasy> easy,std::int32_t ec){
 		auto promise = make_promise<void>();
-		auto closure = [promise, this, easy]()mutable{
-
-			RemoveAndCallCallback(easy, CURLE_OK);
+		auto closure = [promise, this, easy,ec]()mutable{
+			CURLcode code = (ec == 0 ? CURLE_OK : CURLE_ABORTED_BY_CALLBACK);
+			RemoveAndCallCallback(easy, code);
 		};
 		strand_.Add(closure);
 

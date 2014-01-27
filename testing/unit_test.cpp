@@ -30,6 +30,7 @@ bool test_get(cppcomponents::awaiter await){
     Request req("https://www.google.com");
     //req.ConnectTimeout = 5;
     //req.RequestTimeout = 10;
+	req.DownloadFileName = "down.htm";
     auto response = await(client.Fetch(req));
 
     auto str = response.ErrorMessage();

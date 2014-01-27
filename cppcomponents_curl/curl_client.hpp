@@ -4,6 +4,8 @@
 
 
 #include "cppcomponents_curl.hpp"
+#include <fstream>
+#include <cppcomponents_asio_runtime/cppcomponents_asio_runtime.hpp>
 
 namespace cppcomponents_curl{
 
@@ -39,6 +41,7 @@ namespace cppcomponents_curl{
 		std::string Cookie;
 		std::string CookieFile;
 
+		std::string DownloadFileName;
 
 
 		cppcomponents::Channel<cppcomponents::use<cppcomponents::IBuffer>> StreamingChannel;
@@ -63,6 +66,66 @@ namespace cppcomponents_curl{
 		Easy easy_;
 
 		Response response_;
+		
+		struct EasyAborter{
+			cppcomponents::use<IEasy> easy_;
+
+			EasyAborter(cppcomponents::use<IEasy> easy) :easy_{ easy }{}
+			void Commit(){ easy_ = nullptr; }
+			
+			~EasyAborter(){
+				try{
+					if (!easy_)return;
+					auto multi = Curl::DefaultMulti();
+					multi.Remove(easy_, Constants::Errors::CURLE_ABORTED_BY_CALLBACK);
+				}
+				catch (...){}
+			}
+
+		};
+
+		static void HandleStreamingDownload(cppcomponents::use<IEasy> easy, std::shared_ptr<std::ofstream> pof, cppcomponents::Channel<cppcomponents::use<cppcomponents::IBuffer>> chan,
+			cppcomponents::Future<cppcomponents::use<cppcomponents::IBuffer>> f){
+			EasyAborter aborter{ easy };
+			using namespace cppcomponents::asio_runtime;
+			auto blocking = Runtime::GetBlockingThreadPool();
+			if (f.ErrorCode() == cppcomponents::error_abort::ec){
+				pof->flush();
+				pof->close();
+			}
+			else{
+				auto buf = f.Get();
+				cppcomponents::async(blocking, [pof, chan, buf, easy]()mutable{
+					EasyAborter aborter{ easy };
+					pof->write(buf.Begin(), buf.Size());
+					pof->flush();
+					chan.Read().Then(Runtime::GetThreadPool(), std::bind(HandleStreamingDownload, easy, pof, chan, std::placeholders::_1));
+					aborter.Commit();
+				});
+			}
+			aborter.Commit();
+
+		}
+
+		static void OpenFileAndHandleStreamingDownload(cppcomponents::use<IEasy> easy, std::string filename, cppcomponents::Channel<cppcomponents::use<cppcomponents::IBuffer>> chan,
+			cppcomponents::Future<cppcomponents::use<cppcomponents::IBuffer>> f){
+			EasyAborter aborter{ easy };
+			using namespace cppcomponents;
+			using namespace cppcomponents::asio_runtime;
+			auto blocking = Runtime::GetBlockingThreadPool();
+			if (f.ErrorCode() == cppcomponents::error_abort::ec){
+				aborter.Commit();
+				return;
+			}
+			auto buf = f.Get();
+			std::shared_ptr<std::ofstream> pof = std::make_shared<std::ofstream>(filename);
+			pof->write(buf.Begin(), buf.Size());
+			pof->flush();
+			chan.Read().Then(Runtime::GetThreadPool(), std::bind(HandleStreamingDownload, easy, pof, chan, std::placeholders::_1));
+			aborter.Commit();
+
+
+		}
 
 		void HandleOptions(const Request& req){
 			easy_.SetPointerOption(Constants::Options::CURLOPT_URL, const_cast<char*>(req.Url.c_str()));
@@ -251,8 +314,15 @@ namespace cppcomponents_curl{
 
 		void HandleWriteFunction(const Request& req){
 			cppcomponents::use<Callbacks::WriteFunction> writer_func;
-			if (req.StreamingChannel){
+			if (req.StreamingChannel || req.DownloadFileName.size()){
 				auto chan = req.StreamingChannel;
+				if (req.DownloadFileName.size()){
+					if (!chan){
+						chan = cppcomponents::make_channel<cppcomponents::use<cppcomponents::IBuffer>>();
+					}
+					chan.Read().Then(cppcomponents::asio_runtime::Runtime::GetBlockingThreadPool(),std::bind(OpenFileAndHandleStreamingDownload, easy_, req.DownloadFileName, chan, std::placeholders::_1));
+				}				
+				
 				auto func = [chan](char* p, std::size_t n, std::size_t nmemb) mutable -> std::size_t{
 					auto sz = n*nmemb;
 					auto buffer = cppcomponents::Buffer::Create(sz);
@@ -276,6 +346,8 @@ namespace cppcomponents_curl{
 			}
 
 			easy_.SetFunctionOption(Constants::Options::CURLOPT_WRITEFUNCTION, writer_func);
+
+
 		}
 		void HandleHeaderFunction(const Request& req){
 			cppcomponents::use<Callbacks::HeaderFunction> header_func;
