@@ -34,6 +34,7 @@ bool test_get(cppcomponents::awaiter await){
     auto response = await(client.Fetch(req));
 
     auto str = response.ErrorMessage();
+	auto ec = response.ErrorCode();
 	auto body = response.Body().to_string();
 
     return true;
