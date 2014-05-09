@@ -16,21 +16,23 @@ namespace{
 }
 #endif
 #include <cppcomponents_curl/curl_client.hpp>
-#include <cppcomponents_async_coroutine_wrapper/cppcomponents_resumable_await.hpp>
+#include <cppcomponents_concurrency/await.hpp>
 #include <cppcomponents/loop_executor.hpp>
 
 #include <iostream>
 #include <assert.h>
 
 using namespace cppcomponents_curl;
+using cppcomponents::await;
+using cppcomponents::await_as_future;
 
-bool test_get(cppcomponents::awaiter await){
+bool test_get(cppcomponents::awaiter ){
 
     CurlClient client;
     Request req("https://www.google.com");
     //req.ConnectTimeout = 5;
     //req.RequestTimeout = 10;
-	req.DownloadFileName = "down.htm";
+	req.DownloadFileName = "../down.htm";
     auto response = await(client.Fetch(req));
 
     auto str = response.ErrorMessage();
@@ -40,7 +42,7 @@ bool test_get(cppcomponents::awaiter await){
     return true;
 }
 
-int async_main(cppcomponents::awaiter await){
+int async_main(cppcomponents::awaiter ){
     await(cppcomponents::resumable(test_get)());
     cppcomponents_curl::CurlClient client;
 	auto response = await(client.Fetch("ftp://sailor.gutenberg.lib.md.us/gutenberg/8/81/81-h/81-h.htm"));

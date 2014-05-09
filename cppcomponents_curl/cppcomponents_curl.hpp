@@ -16,29 +16,29 @@ namespace cppcomponents_curl{
 	struct ISlist :cppcomponents::define_interface<cppcomponents::uuid<0x66226e79, 0xc3c5, 0x410f, 0xba91, 0xf01b54127ecc>>
 	{
 		// str must be null-terminated
-		void Append(cppcomponents::cr_string str);
+		void Append(cppcomponents::string_ref str);
 
 		void* GetNative();
 
 		CPPCOMPONENTS_CONSTRUCT(ISlist, Append, GetNative);
 	};
 
-	inline std::string slist_id(){ return "cppcomponents_curl_dll!Slist"; }
+	inline const char* slist_id(){ return "cppcomponents_curl_dll!Slist"; }
 	typedef cppcomponents::runtime_class<slist_id, cppcomponents::object_interfaces<ISlist>> Slist_t;
 	typedef cppcomponents::use_runtime_class<Slist_t> Slist;
 
 
 	struct IForm :cppcomponents::define_interface<cppcomponents::uuid<0x651ae826, 0xb370, 0x474c, 0x8ad7, 0x704c1195317a>>
 	{
-		void AddNameValue(cppcomponents::cr_string name, cppcomponents::cr_string value);
-		void AddNameFileContents(cppcomponents::cr_string name, cppcomponents::cr_string file);
-		void AddFileNoName(cppcomponents::cr_string file);
-		void AddFileNoNameWithContentType(cppcomponents::cr_string file, cppcomponents::cr_string content_type);
-		void AddFileWithName(cppcomponents::cr_string file, cppcomponents::cr_string filename);
-		void AddFileWithNameContentType(cppcomponents::cr_string file, cppcomponents::cr_string filename,cppcomponents::cr_string content_type);
+		void AddNameValue(cppcomponents::string_ref name, cppcomponents::string_ref value);
+		void AddNameFileContents(cppcomponents::string_ref name, cppcomponents::string_ref file);
+		void AddFileNoName(cppcomponents::string_ref file);
+		void AddFileNoNameWithContentType(cppcomponents::string_ref file, cppcomponents::string_ref content_type);
+		void AddFileWithName(cppcomponents::string_ref file, cppcomponents::string_ref filename);
+		void AddFileWithNameContentType(cppcomponents::string_ref file, cppcomponents::string_ref filename,cppcomponents::string_ref content_type);
 
 		// buffer must be kept around until after post is complete
-		void AddFileAsBuffer(cppcomponents::use<cppcomponents::IBuffer> buffer, cppcomponents::cr_string filename, cppcomponents::cr_string content_type);
+		void AddFileAsBuffer(cppcomponents::use<cppcomponents::IBuffer> buffer, cppcomponents::string_ref filename, cppcomponents::string_ref content_type);
 
 		void AddContentHeader(cppcomponents::use<ISlist> list);
 		void* GetNative();
@@ -47,7 +47,7 @@ namespace cppcomponents_curl{
 			AddFileWithName, AddFileWithNameContentType, AddFileAsBuffer, AddContentHeader, GetNative);
 	};
 
-	inline std::string form_id(){ return "cppcomponents_curl_dll!Form"; }
+	inline const char* form_id(){ return "cppcomponents_curl_dll!Form"; }
 	typedef cppcomponents::runtime_class<form_id, cppcomponents::object_interfaces<IForm>> Form_t;
 	typedef cppcomponents::use_runtime_class<Form_t> Form;
 
@@ -64,10 +64,10 @@ namespace cppcomponents_curl{
 
 		std::int32_t GetInt32Info(std::int32_t info);
 		double GetDoubleInfo(std::int32_t info);
-		cppcomponents::cr_string GetStringInfo(std::int32_t info);
+		cppcomponents::string_ref GetStringInfo(std::int32_t info);
 		std::vector<std::string> GetListInfo(std::int32_t info);
 
-		cppcomponents::cr_string GetErrorDescription();
+		cppcomponents::string_ref GetErrorDescription();
 
 		void Reset();
 
@@ -76,23 +76,23 @@ namespace cppcomponents_curl{
 
 		CPPCOMPONENTS_INTERFACE_EXTRAS(IEasy){
 
-			void SetStringOption(std::int32_t option,cppcomponents::cr_string str){
+			void SetStringOption(std::int32_t option,cppcomponents::string_ref str){
 				const void* p = str.data();
 				this->get_interface().SetPointerOption(option,
 					const_cast<void*>(p));
 			}
 		};
 	};
-	inline std::string easy_id(){ return "cppcomponents_curl_dll!Easy"; }
+	inline const char* easy_id(){ return "cppcomponents_curl_dll!Easy"; }
 	typedef cppcomponents::runtime_class<easy_id, cppcomponents::object_interfaces<IEasy>> Easy_t;
 	typedef cppcomponents::use_runtime_class<Easy_t> Easy;
 
 	struct IResponse :cppcomponents::define_interface<cppcomponents::uuid<0xd919e330, 0x7ec6, 0x4e7a, 0xa6a7, 0xaedf0b98dc73>>
 	{
 		cppcomponents::error_code ErrorCode();
-		cppcomponents::cr_string ErrorMessage();
+		cppcomponents::string_ref ErrorMessage();
 		cppcomponents::use<IEasy> Request();
-		cppcomponents::cr_string Body();
+		cppcomponents::string_ref Body();
 		std::vector<std::pair<std::string, std::string>> Headers();
 
 		CPPCOMPONENTS_CONSTRUCT(IResponse, ErrorCode, ErrorMessage, Request, Body, Headers);
@@ -123,7 +123,7 @@ namespace cppcomponents_curl{
 
 		CPPCOMPONENTS_CONSTRUCT(IResponseFactory, Create);
 	};
-	inline std::string response_id(){ return "cppcomponents_curl_dll!Response"; }
+	inline const char* response_id(){ return "cppcomponents_curl_dll!Response"; }
 	typedef cppcomponents::runtime_class<response_id, cppcomponents::object_interfaces<IResponse,IResponseWriter>
 	,cppcomponents::factory_interface<IResponseFactory>> Response_t;
 	typedef cppcomponents::use_runtime_class<Response_t> Response;
@@ -142,17 +142,17 @@ namespace cppcomponents_curl{
 	};
 
 	struct ICurlStatics : cppcomponents::define_interface<cppcomponents::uuid<0x97460a91, 0x62f8, 0x4788, 0x8ba9, 0x7a3d162b5a03>>{
-		std::string Escape(cppcomponents::cr_string url);
-		std::string UnEscape(cppcomponents::cr_string url);
-		cppcomponents::cr_string Version();
-		std::chrono::system_clock::time_point GetDate(cppcomponents::cr_string date);
+		std::string Escape(cppcomponents::string_ref url);
+		std::string UnEscape(cppcomponents::string_ref url);
+		cppcomponents::string_ref Version();
+		std::chrono::system_clock::time_point GetDate(cppcomponents::string_ref date);
 		cppcomponents::use<IMulti> DefaultMulti();
 
 		CPPCOMPONENTS_CONSTRUCT(ICurlStatics, Escape, UnEscape, Version, GetDate, DefaultMulti);
 
 	};
 
-	inline std::string curlstatics_id(){ return "cppcomponents_curl_dll!Curl"; }
+	inline const char* curlstatics_id(){ return "cppcomponents_curl_dll!Curl"; }
 	typedef cppcomponents::runtime_class<curlstatics_id, cppcomponents::static_interfaces<ICurlStatics>> Curl_t;
 	typedef cppcomponents::use_runtime_class<Curl_t> Curl;
 

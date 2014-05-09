@@ -54,7 +54,7 @@ struct ImpSlist :implement_runtime_class<ImpSlist, Slist_t>{
 		}
 	}
 
-	void Append(cppcomponents::cr_string str){
+	void Append(cppcomponents::string_ref str){
 		list_ = curl_slist_append(list_, str.data());
 		if (!list_){
 			throw error_fail();
@@ -81,7 +81,7 @@ struct ImpForm :implement_runtime_class<ImpForm, Form_t>{
 		}
 	}
 
-	void AddNameValue(cppcomponents::cr_string name, cppcomponents::cr_string value){
+	void AddNameValue(cppcomponents::string_ref name, cppcomponents::string_ref value){
 		auto res = curl_formadd(&first_, &last_,
 			CURLFORM_COPYNAME, name.data(),
 			CURLFORM_NAMELENGTH, (long)name.size(),
@@ -90,7 +90,7 @@ struct ImpForm :implement_runtime_class<ImpForm, Form_t>{
 			CURLFORM_END);
 		curl_throw_if_error(res);
 	}
-	void AddNameFileContents(cppcomponents::cr_string name, cppcomponents::cr_string file){
+	void AddNameFileContents(cppcomponents::string_ref name, cppcomponents::string_ref file){
 		auto res = curl_formadd(&first_, &last_,
 			CURLFORM_COPYNAME, name.data(),
 			CURLFORM_NAMELENGTH, (long)name.size(),
@@ -100,7 +100,7 @@ struct ImpForm :implement_runtime_class<ImpForm, Form_t>{
 		curl_throw_if_error(res);
 
 	}
-	void AddFileNoName(cppcomponents::cr_string file){
+	void AddFileNoName(cppcomponents::string_ref file){
 		auto res = curl_formadd(&first_, &last_,
 			CURLFORM_FILE, file.data(),
 			CURLFORM_END);
@@ -108,7 +108,7 @@ struct ImpForm :implement_runtime_class<ImpForm, Form_t>{
 		curl_throw_if_error(res);
 
 	}
-	void AddFileNoNameWithContentType(cppcomponents::cr_string file, cppcomponents::cr_string content_type){
+	void AddFileNoNameWithContentType(cppcomponents::string_ref file, cppcomponents::string_ref content_type){
 		auto res = curl_formadd(&first_, &last_,
 			CURLFORM_FILE, file.data(),
 			CURLFORM_CONTENTTYPE, content_type.data(),
@@ -117,7 +117,7 @@ struct ImpForm :implement_runtime_class<ImpForm, Form_t>{
 		curl_throw_if_error(res);
 
 	}
-	void AddFileWithName(cppcomponents::cr_string file, cppcomponents::cr_string filename){
+	void AddFileWithName(cppcomponents::string_ref file, cppcomponents::string_ref filename){
 		auto res = curl_formadd(&first_, &last_,
 			CURLFORM_FILE, file.data(),
 			CURLFORM_FILENAME, filename.data(),
@@ -126,7 +126,7 @@ struct ImpForm :implement_runtime_class<ImpForm, Form_t>{
 		curl_throw_if_error(res);
 
 	}
-	void AddFileWithNameContentType(cppcomponents::cr_string file, cppcomponents::cr_string filename, cppcomponents::cr_string content_type){
+	void AddFileWithNameContentType(cppcomponents::string_ref file, cppcomponents::string_ref filename, cppcomponents::string_ref content_type){
 		auto res = curl_formadd(&first_, &last_,
 			CURLFORM_FILE, file.data(),
 			CURLFORM_CONTENTTYPE, content_type.data(),
@@ -137,7 +137,7 @@ struct ImpForm :implement_runtime_class<ImpForm, Form_t>{
 	}
 
 	// buffer must be kept around until after post is complete
-	void AddFileAsBuffer(cppcomponents::use<cppcomponents::IBuffer> buffer, cppcomponents::cr_string filename, cppcomponents::cr_string content_type){
+	void AddFileAsBuffer(cppcomponents::use<cppcomponents::IBuffer> buffer, cppcomponents::string_ref filename, cppcomponents::string_ref content_type){
 		auto res = curl_formadd(&first_, &last_,
 			CURLFORM_BUFFERPTR, buffer.Begin(),
 			CURLFORM_BUFFERLENGTH, (long)buffer.Size(),
@@ -179,7 +179,7 @@ template<class Delegate>
 	 CPPCOMPONENTS_CONSTRUCT(IImp, GetImp);
  };
 
- inline std::string easyimp_id(){ return "cppcomponents_curl_dll!Easy"; }
+ inline const char* easyimp_id(){ return "cppcomponents_curl_dll!Easy"; }
  typedef cppcomponents::runtime_class<easyimp_id, cppcomponents::object_interfaces<IEasy,IImp>> EasyWithImp_t;
  typedef cppcomponents::use_runtime_class<EasyWithImp_t> EasyWithImp;;
 
@@ -400,11 +400,11 @@ template<class Delegate>
 		 return result;
 
 	 }
-	 cppcomponents::cr_string GetStringInfo(std::int32_t info){
+	 cppcomponents::string_ref GetStringInfo(std::int32_t info){
 		 char* result{};
 		 auto res = curl_easy_getinfo(easy_, static_cast<CURLINFO>(info), &result);
 		 curl_throw_if_error(res);
-		 return cr_string{ result };
+		 return string_ref{ result };
 
 	 }
 	 std::vector<std::string> GetListInfo(std::int32_t info){
@@ -427,8 +427,8 @@ template<class Delegate>
 		 }
 	 }
 
-	 cppcomponents::cr_string GetErrorDescription(){
-		 return cr_string{ error_buffer_.data() };
+	 cppcomponents::string_ref GetErrorDescription(){
+		 return string_ref{ error_buffer_.data() };
 	 }
 
 
@@ -443,12 +443,12 @@ template<class Delegate>
 CPPCOMPONENTS_REGISTER(ImpEasy)
 
 
-inline std::string multi_id(){ return "cppcomponents_curl_dll!Multi"; }
+inline const char* multi_id(){ return "cppcomponents_curl_dll!Multi"; }
 typedef cppcomponents::runtime_class<multi_id, cppcomponents::object_interfaces<IMulti, IImp>> Multi_t;
 typedef cppcomponents::use_runtime_class<Multi_t> Multi;
 
 
-//inline std::string response_id(){ return "cppcomponents_curl_dll!Response"; }
+//inline const char* response_id(){ return "cppcomponents_curl_dll!Response"; }
 //typedef cppcomponents::runtime_class<response_id, cppcomponents::object_interfaces<IResponse, IImp>,factory_interface<NoConstructorFactoryInterface>> Response_t;
 //typedef cppcomponents::use_runtime_class<Response_t> Response;
 
@@ -499,19 +499,19 @@ struct ImpResponse :implement_runtime_class<ImpResponse, Response_t>
 		return ec_;
 	}
 
-	cppcomponents::cr_string ErrorMessage(){
+	cppcomponents::string_ref ErrorMessage(){
 		return easy_.GetErrorDescription();
 	}
 
 	cppcomponents::use<IEasy> Request(){
 		return easy_;
 	}
-	cppcomponents::cr_string Body(){
+	cppcomponents::string_ref Body(){
 		throw_if_error(ec_);
 		if (!body_.size()){
-			return cr_string{};
+			return string_ref{};
 		}
-		return cr_string{ &body_[0], body_.size() };
+		return string_ref{ &body_[0], body_.size() };
 	}
 
 	std::vector<std::pair<std::string, std::string>> Headers(){
@@ -895,7 +895,7 @@ struct curl_freer{
 struct ImpCurlStatics : implement_runtime_class<ImpCurlStatics, Curl_t>
 {
 	ImpCurlStatics(){}
-	static std::string Escape(cppcomponents::cr_string url){
+	static std::string Escape(cppcomponents::string_ref url){
 		auto c = curl_escape(url.data(), url.size());
 		curl_freer f{ c };
 		if (!c){
@@ -904,7 +904,7 @@ struct ImpCurlStatics : implement_runtime_class<ImpCurlStatics, Curl_t>
 		std::string ret{ c };
 		return ret;
 	}
-	static std::string UnEscape(cppcomponents::cr_string url){
+	static std::string UnEscape(cppcomponents::string_ref url){
 		auto c = curl_unescape(url.data(), url.size());
 		curl_freer f{ c };
 		if (!c){
@@ -913,10 +913,10 @@ struct ImpCurlStatics : implement_runtime_class<ImpCurlStatics, Curl_t>
 		std::string ret{ c };
 		return ret;
 	}
-	static cppcomponents::cr_string Version(){
-		return cr_string{ curl_version() };
+	static cppcomponents::string_ref Version(){
+		return string_ref{ curl_version() };
 	}
-	static std::chrono::system_clock::time_point GetDate(cppcomponents::cr_string date){
+	static std::chrono::system_clock::time_point GetDate(cppcomponents::string_ref date){
 		auto t = curl_getdate(date.data(),nullptr);
 		return std::chrono::system_clock::from_time_t(t);
 	}

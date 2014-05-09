@@ -43,7 +43,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>c:\Repos\cppcomponents_asio_runtime;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)packages\curl.7.30.0.2\build\native\lib\v110\Win32\Debug\static;$(SolutionDir)packages\openssl.1.0.1.24\build\native\lib\v110\Win32\Debug\static;$(SolutionDir)packages\zlib.1.2.8.6\build\native\lib\v110\Win32\Debug\static\cdecl;$(SolutionDir)packages\libssh2.1.4.3.3\build\native\lib\v110\Win32\Debug\static\cdecl;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)packages\curl.7.30.0.2\build\native\lib\v110\Win32\Debug\static;$(SolutionDir)packages\zlib.1.2.8.6\build\native\lib\v110\Win32\Debug\static\cdecl;$(SolutionDir)packages\libssh2.1.4.3.3\build\native\lib\v110\Win32\Debug\static\cdecl;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
