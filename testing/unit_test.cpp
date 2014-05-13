@@ -26,7 +26,7 @@ using namespace cppcomponents_curl;
 using cppcomponents::await;
 using cppcomponents::await_as_future;
 
-bool test_get(cppcomponents::awaiter ){
+bool test_get(){
 
     CurlClient client;
     Request req("https://www.google.com");
@@ -42,7 +42,7 @@ bool test_get(cppcomponents::awaiter ){
     return true;
 }
 
-int async_main(cppcomponents::awaiter ){
+int async_main(){
     await(cppcomponents::resumable(test_get)());
     cppcomponents_curl::CurlClient client;
 	auto response = await(client.Fetch("ftp://sailor.gutenberg.lib.md.us/gutenberg/8/81/81-h/81-h.htm"));
