@@ -5,7 +5,7 @@ namespace cppcomponents_curl{
 	namespace Constants{
 
 		namespace Errors{
-			typedef enum {
+			enum {
 				CURLE_OK = 0,
 				CURLE_UNSUPPORTED_PROTOCOL = -1,    /* 1 */
 				CURLE_FAILED_INIT = -2,             /* 2 */

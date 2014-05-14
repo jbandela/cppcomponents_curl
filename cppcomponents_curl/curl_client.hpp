@@ -295,7 +295,7 @@ namespace cppcomponents_curl{
 
 			}
 			else if (req.Method == "DELETE"){
-				easy_.SetPointerOption(Constants::Options::CURLOPT_CUSTOMREQUEST, "DELETE");
+				easy_.SetPointerOption(Constants::Options::CURLOPT_CUSTOMREQUEST, const_cast<char*>("DELETE"));
 
 
 			}
