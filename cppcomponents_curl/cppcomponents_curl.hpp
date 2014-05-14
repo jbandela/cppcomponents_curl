@@ -160,14 +160,14 @@ namespace cppcomponents_curl{
 
 	namespace Callbacks{
 
-		typedef cppcomponents::delegate < std::size_t(char* ptr, std::size_t size,
-			std::size_t nmemb)> WriteFunction;
-		typedef cppcomponents::delegate < std::size_t(void* ptr, std::size_t size,
-			std::size_t nmemb)> ReadFunction;
-		typedef cppcomponents::delegate < std::size_t(double dltotal, double dlnow, 
+		typedef cppcomponents::delegate < std::uint64_t(char* ptr, std::uint64_t size,
+			std::uint64_t nmemb)> WriteFunction;
+		typedef cppcomponents::delegate < std::uint64_t(void* ptr, std::uint64_t size,
+			std::uint64_t nmemb)> ReadFunction;
+		typedef cppcomponents::delegate < std::uint64_t(double dltotal, double dlnow, 
 			double ultotal, double ulnow)> ProgressFunction;
-		typedef cppcomponents::delegate < std::size_t(void* ptr, std::size_t size,
-			std::size_t nmemb)> HeaderFunction;
+		typedef cppcomponents::delegate < std::uint64_t(void* ptr, std::uint64_t size,
+			std::uint64_t nmemb)> HeaderFunction;
 
 
 
