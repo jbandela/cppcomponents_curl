@@ -1,19 +1,17 @@
 #include "../cppcomponents_curl/cppcomponents_curl.hpp"
 #include <curl/curl.h>
 
-#include <cppcomponents_asio_runtime/cppcomponents_asio_runtime.hpp>
-
 #include <array>
 #include <algorithm>
 #include <map>
 #include <set>
-
+#include <cppcomponents_asio_runtime/cppcomponents_asio_runtime.hpp>
 #include <thread>
 
 #ifdef _WIN32
 #include <io.h>
 #else
-#include <unistd>
+#include <unistd.h>
 #endif
 
 
@@ -524,12 +522,16 @@ struct ImpResponse :implement_runtime_class<ImpResponse, Response_t>
 CPPCOMPONENTS_REGISTER(ImpResponse)
 
 
+namespace{
+	const int pollid = 0;
+	const int callbackid = 0;
+	const int selfid = 0;
+	
+
+}
 struct ImpMulti :implement_runtime_class<ImpMulti, Multi_t>
 {
-	static const int pollid = 0;
-	static const int callbackid = 0;
-	static const int selfid = 0;
-	
+
 
 	CURLM* cmulti_;
 
