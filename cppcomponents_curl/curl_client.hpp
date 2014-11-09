@@ -51,8 +51,8 @@ namespace cppcomponents_curl{
 
 
 		Request(){ Initialize(); }
-		Request(const std::string& url) :Url{ url }{ Initialize(); }
-		Request(const char* url) :Url{ url }{ Initialize(); }
+		Request(const std::string& url) :Url( url ){ Initialize(); }
+		Request(const char* url) :Url( url ){ Initialize(); }
 
 	private:
 		void Initialize(){

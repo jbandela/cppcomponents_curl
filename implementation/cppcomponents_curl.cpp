@@ -924,7 +924,7 @@ struct ImpCurlStatics : implement_runtime_class<ImpCurlStatics, Curl_t>
 	}
 	static cppcomponents::use<IMulti> DefaultMulti(){
 		struct uniq{};
-		return cross_compiler_interface::detail::safe_static_init<Multi, uniq>::get();
+		return cppcomponents::detail::safe_static_init<Multi, uniq>::get();
 
 	}
 
